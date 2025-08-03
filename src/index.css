@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    .wa-bg-light {
+        background-image: url('./assets/images/Whatsapp_ios_bg_light.webp');
+        background-size: cover;
+        background-position: center;
+        min-height: 535px;
+    }
+
+    .wa-bg-dark {
+        background-image: url('./assets/images/Whatsapp_ios_bg_dark.webp');;
+        background-size: cover;
+        background-position: center;
+        min-height: 535px;
+    }
+}

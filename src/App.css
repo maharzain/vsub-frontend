@@ -1,0 +1,20 @@
+.scrollbar {
+    --sb-track-color: rgba(0, 0, 0, 0); /* Removed extra # before rgba */
+    --sb-thumb-color: #1a1c24;
+    --sb-size: 7px;
+}
+
+.scrollbar::-webkit-scrollbar {
+    width: var(--sb-size);  /* Vertical scrollbar width */
+    height: var(--sb-size); /* Horizontal scrollbar height */
+}
+
+.scrollbar::-webkit-scrollbar-track {
+    background: var(--sb-track-color);
+    border-radius: 6px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+    background: var(--sb-thumb-color);
+    border-radius: 9px;
+}
