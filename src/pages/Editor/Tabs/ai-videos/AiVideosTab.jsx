@@ -28,35 +28,40 @@ const AiVideosTab = ({ data }) => {
   ]);
 
   useEffect(() => {
-    setTabData({
-      ...tabData,
-      voice: {
-        voiceVolume: 30,
-        voicePitch: 65,
-      },
-      effects: {
-        particlesBg: true,
-        transition: "Smooth",
-      },
-      music: {
-        volume: 40,
-        musicFile: null,
-      },
-    });
-  }, []);
+    // Initialize tabData for AI videos if it's not set or is 0
+    if (tabData === 0 || !tabData || Object.keys(tabData).length === 0) {
+      setTabData({
+        voice: {
+          voiceVolume: 50,
+          voicePitch: 65,
+        },
+        effects: {
+          particlesBg: false,
+          transition: "Smooth",
+        },
+        music: {
+          volume: 40,
+          musicFile: null,
+        },
+      });
+    }
+  }, [tabData, setTabData]);
 
-  if (tabData == 0) {
-    return null;
-  }
+  // Don't return null anymore - let the component render even if tabData is 0
+  const currentTabData = tabData === 0 ? {
+    voice: { voiceVolume: 50, voicePitch: 65 },
+    effects: { particlesBg: false, transition: "Smooth" },
+    music: { volume: 40, musicFile: null }
+  } : tabData;
 
   const renderContent = () => {
     switch (activeTab) {
       case 0:
         return <Content content={content} setContent={setContent} />;
       case 1:
-        return <Settings settings={tabData} setSettings={setTabData} />;
+        return <Settings settings={currentTabData} setSettings={setTabData} />;
       case 2:
-        return <MusicTab settings={tabData} setSettings={setTabData} />;
+        return <MusicTab settings={currentTabData} setSettings={setTabData} />;
       default:
         return null;
     }

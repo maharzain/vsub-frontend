@@ -392,7 +392,7 @@ const SubtitlesVideoComponent = (props) => {
 
       {/* Main video section for both vertical and top-bottom splits */}
       {/* Default video rendering for most content types */}
-      {editorData.type !== "Ai Videos" && editorData.type !== "AiVideo" && editorData.type !== "FakeText" && (
+      {editorData.type !== "Ai Videos" && editorData.type !== "AiVideo" && editorData.type !== "FakeText" && editorData.type !== "Brain" && (
         <OffthreadVideo
           src={
             editorData.type === "Split"
@@ -462,6 +462,14 @@ const SubtitlesVideoComponent = (props) => {
           tabData={tabData} // Tab data for the FakeText tab
           editorData={editorData} // Editor data for the FakeText tab
           chatDurations={chatDurations} // Duration of each audio in the messages for texts
+        />
+      )}
+
+      {editorData.type === "Brain" && (
+        <BrainTemplate
+          duration={duration} // Duration of the video
+          tabData={tabData} // Tab data for the Brain tab
+          editorData={editorData} // Editor data for the Brain tab
         />
       )}
 
@@ -653,14 +661,23 @@ const FakeTextTemplate = ({ duration, editorData, tabData, chatDurations }) => {
   const { fps } = useVideoConfig();
 
   let cumulativeFrame = 0; // Tracks the start frame dynamically
-  console.log(editorData);
+  console.log("FakeText editorData:", editorData);
+  console.log("FakeText tabData:", tabData);
+
+  // Ensure tabData.video exists with default values for FakeText
+  const videoData = tabData?.video || {
+    files: [],
+    selectedVideo: 0,
+    startsFrom: 0,
+    mute: false
+  };
 
   return (
     <div>
       <OffthreadVideo
-        src={tabData.video?.files?.[tabData.video.selectedVideo] || VIDEO_URL}
-        startFrom={tabData.video?.startsFrom || 0}
-        muted={tabData.video?.mute ?? false} // check if it exists
+        src={videoData.files?.[videoData.selectedVideo] || VIDEO_URL}
+        startFrom={videoData.startsFrom || 0}
+        muted={videoData.mute ?? false} // check if it exists
         style={{
           objectFit: "cover",
           width: "100%", // Width for vertical split
@@ -682,7 +699,7 @@ const FakeTextTemplate = ({ duration, editorData, tabData, chatDurations }) => {
 
       {/* Sequence ensures that the audio plays sequentially */}
       <Sequence from={0} durationInFrames={duration * fps}>
-        {editorData?.messages.map((msg, index) => {
+        {editorData?.messages?.map((msg, index) => {
           const { mute, type } = msg; // Extract dynamic values
           const { sound, volume } = msg.content; // Extract dynamic values
           const messageDuration = chatDurations[index] || 0; // Default to 0 if duration is missing
@@ -690,16 +707,21 @@ const FakeTextTemplate = ({ duration, editorData, tabData, chatDurations }) => {
           // Message Sound Start Frame
           const messageStartFrame = cumulativeFrame;
           cumulativeFrame += messageDuration * fps; // Increment frame for message sound
+          
+          // Safe access to voice settings with defaults
+          const leftVoiceSettings = tabData?.leftVoice || { voiceVolume: 100, voiceSpeed: 1 };
+          const rightVoiceSettings = tabData?.rightVoice || { voiceVolume: 100, voiceSpeed: 1 };
+          
           //volume of the text message sound
           const soundVolume =
             type === "Left"
-              ? tabData.leftVoice.voiceVolume / 100
-              : tabData.rightVoice.voiceVolume / 100;
+              ? leftVoiceSettings.voiceVolume / 100
+              : rightVoiceSettings.voiceVolume / 100;
           //speed of the text message sound
           const soundSpeed =
             type === "Left"
-              ? tabData.leftVoice.voiceSpeed
-              : tabData.rightVoice.voiceSpeed;
+              ? leftVoiceSettings.voiceSpeed
+              : rightVoiceSettings.voiceSpeed;
  
 
           return (
@@ -720,6 +742,81 @@ const FakeTextTemplate = ({ duration, editorData, tabData, chatDurations }) => {
           );
         })}
       </Sequence>
+    </div>
+  );
+};
+
+const BrainTemplate = ({ duration, editorData, tabData }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  console.log("Brain editorData:", editorData);
+  console.log("Brain tabData:", tabData);
+
+  // Ensure tabData.video exists with default values for Brain
+  const videoData = tabData?.video || {
+    files: [],
+    selectedVideo: 0,
+    startsFrom: 0,
+    mute: false
+  };
+
+  return (
+    <div>
+      <OffthreadVideo
+        src={videoData.files?.[videoData.selectedVideo] || VIDEO_URL}
+        startFrom={videoData.startsFrom || 0}
+        muted={videoData.mute ?? false}
+        style={{
+          objectFit: "cover",
+          width: "100%",
+          height: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Brain Teaser Questions Display */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 1,
+          textAlign: "center",
+          color: "white",
+          fontSize: "24px",
+          fontWeight: "bold",
+          backgroundColor: "rgba(0, 0, 0, 0.7)",
+          padding: "20px",
+          borderRadius: "10px",
+          maxWidth: "80%",
+        }}
+      >
+        <p>Brain Teaser Video</p>
+        <p style={{ fontSize: "18px", marginTop: "10px" }}>
+          Language: {editorData.language || "English"}
+        </p>
+        <p style={{ fontSize: "18px", marginTop: "5px" }}>
+          Media: {editorData.media || "Not specified"}
+        </p>
+        <p style={{ fontSize: "16px", marginTop: "5px" }}>
+          Template: {editorData.selectedTemplate || "Default"}
+        </p>
+      </div>
+
+      {/* Audio for Brain content if available */}
+      {editorData.sound && (
+        <RemotionAudio
+          src={editorData.sound}
+          volume={tabData?.voice?.voiceVolume / 100 || 0.5}
+          playbackRate={tabData?.voice?.voiceSpeed || 1}
+        />
+      )}
     </div>
   );
 };

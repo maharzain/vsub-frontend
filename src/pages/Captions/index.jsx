@@ -8,7 +8,7 @@ import IconChevronDown from "../../assets/images/IconChevronDown.svg";
 import { languages } from "../../constants";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../../constants/api.js";
 import CaptionsSvg from "../../../src/assets/images/play.svg";
 import VideoUpload from "../../components/VideoUpload";
 

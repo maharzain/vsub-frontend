@@ -10,7 +10,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import StorySvg from "../../../src/assets/images/storyBook.svg";
-import axios from 'axios';
+import axios from '../../constants/api.js';
 
 export const StoryContext = createContext();
 
@@ -31,6 +31,7 @@ const Story = () => {
   // continue btn
   const [isPremium, setIsPremium] = useState(true);
   const [proceed, setProceed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const initiateStory = async () => {
@@ -87,7 +88,13 @@ const Story = () => {
   
     // If all validations pass, proceed to the next page
     if (audioFile || (transcript && isPremium)) {
+      setIsLoading(true);
       try {
+        toast.loading("Creating your story... Please wait", {
+          id: "story-processing",
+          duration: Infinity,
+        });
+
         // Send the request to initiate the story
         const response = await axios.post('/initiate-story', {
           message: {
@@ -96,28 +103,38 @@ const Story = () => {
           voiceProvider: voiceProvider.toLowerCase(),
           voice: voice.toLowerCase(),
         });
-  
+
+        toast.dismiss("story-processing");
+
         // Extract the ID from the response
         const uniqueKey = response.data.id;
         
         if (!uniqueKey) {
-          return
+          throw new Error("No ID received from server");
         }
-  
+
+        toast.success("Story created! Redirecting to editor...", {
+          duration: 2000,
+          position: "top-center",
+        });
+
         const tabName = "story";
         const img = StorySvg;
-  
+
         // Navigate to the next page with the received ID
         navigate(`/workspace/editor/${uniqueKey}`, {
           state: { data: language, name: tabName, img },
         });
-  
+
       } catch (error) {
+        toast.dismiss("story-processing");
         console.error('Error initiating story:', error);
         toast.error("Failed to initiate story. Please try again.", {
-          duration: 2000,
+          duration: 4000,
           position: "top-center",
         });
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -174,10 +191,11 @@ const Story = () => {
             <FilledButton
               type='button'
               size='1.8rem'
-              proceed={proceed}
+              proceed={proceed && !isLoading}
               onClick={handleContinue}
+              disabled={isLoading}
             >
-              Continue
+              {isLoading ? "Processing..." : "Continue"}
             </FilledButton>
           </div>
         </BorderBox>

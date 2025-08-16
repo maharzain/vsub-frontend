@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+import axios from "../../constants/api.js";
 import Container from "../../components/Container";
 import Notice from "../../components/Notice";
 import FakeTextTabUI from "./components/FakeTextTabUI";
@@ -41,6 +42,7 @@ const FakeText = () => {
   // continue btn
   const [isPremium, setIsPremium] = useState(true);
   const [proceed, setProceed] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -49,7 +51,7 @@ const FakeText = () => {
     setProceed(messages.length > 0);
   }, [messages]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // If the user is a premium subscriber
     if (!isPremium) {
       toast.error("Please subscribe to a paid plan.", {
@@ -59,17 +61,41 @@ const FakeText = () => {
       return; // Stop further execution
     }
   
-    // If all validations pass  proceed to the next page
+    // If all validations pass proceed to the next page
     if (messages.length != 0 && isPremium) {
-      setTimeout(() => {
-        // navigate to the next page
-        const uniqueKey = uuidv4(); // Generate a unique key
-        const tabName = "FakeText"; // Set the tab name
-        const img = fakeTextSvg; // Set the image
-        navigate(`/workspace/editor/${uniqueKey}`, {
-          state: { data:messages, name: tabName , img },
+      setIsLoading(true);
+      
+      try {
+        toast.loading("Creating your fake text story... Please wait", {
+          id: "fake-text-processing",
+          duration: Infinity,
         });
-      }, 1000); // Adjust timing if needed
+
+        const response = await axios.post('/initiate-fake-text', {
+          messages: messages,
+          leftVoiceProvider: leftVoiceProvider,
+          rightVoiceProvider: rightVoiceProvider,
+          leftVoiceInput: leftVoiceInput,
+          rightVoiceInput: rightVoiceInput,
+          leftVoice: leftVoice,
+          rightVoice: rightVoice
+        });
+
+        if (response.data && response.data.id) {
+          toast.dismiss("fake-text-processing");
+          toast.success("Fake text story created successfully!");
+          navigate(`/workspace/editor/${response.data.id}`);
+        } else {
+          toast.dismiss("fake-text-processing");
+          toast.error('Failed to create fake text story');
+        }
+      } catch (error) {
+        console.error('Error creating fake text story:', error);
+        toast.dismiss("fake-text-processing");
+        toast.error('Failed to create fake text story. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -162,11 +188,12 @@ const FakeText = () => {
           <FilledButton
             size='2rem'
             className='mt-6'
-            proceed={proceed}
+            proceed={proceed && !isLoading}
             onClick={handleContinue}
+            disabled={isLoading}
           >
             <img src={proceed ? IconBolt : IconBoltDisabled} alt='icon' />
-            Create video
+            {isLoading ? "Creating video..." : "Create video"}
           </FilledButton>
         </div>
       </Container>

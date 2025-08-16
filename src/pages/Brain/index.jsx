@@ -15,6 +15,7 @@ import FilledButton from "../../components/FilledButton";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+import axios from "../../constants/api.js";
 import BrainSvg from "../../../src/assets/images/brain.png";
 
 const Brain = () => {
@@ -29,13 +30,14 @@ const Brain = () => {
   );
 
   const [isPremium, setIsPremium] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     setLangInput(e.target.value);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // First, validate the media input
     if (media === "") {
       toast.error("Please select a Cartoon/Movie", {
@@ -54,17 +56,37 @@ const Brain = () => {
       return; // Stop further execution
     }
 
-    // If all validations pass  proceed to the next page
+    // If all validations pass proceed to the next page
     if (media && language && selectedTemplate && isPremium) {
-      setTimeout(() => {
-        // navigate to the next page
-        const uniqueKey = uuidv4(); // Generate a unique key
-        const tabName = "Brain"; // Set the tab name
-        const img = BrainSvg; // Set the image
-        navigate(`/workspace/editor/${uniqueKey}`, {
-          state: { data:"language is nothing but a way to communicate", name: tabName, img },
+      setIsLoading(true);
+      
+      try {
+        toast.loading("Creating your brain teaser video... Please wait", {
+          id: "brain-processing",
+          duration: Infinity,
         });
-      }, 1000); // Adjust timing if needed
+
+        const response = await axios.post('/initiate-brain', {
+          language: language,
+          media: media,
+          selectedTemplate: selectedTemplate
+        });
+
+        if (response.data && response.data.id) {
+          toast.dismiss("brain-processing");
+          toast.success("Brain teaser video created successfully!");
+          navigate(`/workspace/editor/${response.data.id}`);
+        } else {
+          toast.dismiss("brain-processing");
+          toast.error('Failed to create brain teaser video');
+        }
+      } catch (error) {
+        console.error('Error creating brain teaser video:', error);
+        toast.dismiss("brain-processing");
+        toast.error('Failed to create brain teaser video. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -132,8 +154,13 @@ const Brain = () => {
       />
       <div className='py-3' />
       <div className='flex justify-end pb-44'>
-        <FilledButton size='2rem' onClick={handleContinue}>
-          Continue
+        <FilledButton 
+          size='2rem' 
+          onClick={handleContinue}
+          proceed={!isLoading}
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating video..." : "Continue"}
         </FilledButton>
       </div>
     </Container>

@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import AiVideosSvg from "../../../src/assets/images/aiVideo.svg";
-import axios from "../../constants/api";
+import axios from "../../constants/api.js";
 export const AiVideoContext = createContext();
 
 const AiVideo = () => {

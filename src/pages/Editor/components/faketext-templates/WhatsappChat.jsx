@@ -24,9 +24,13 @@ const WhatsappChat = ({
 
   const maxVisibleMessages = 9; // Maximum number of messages to display at a time
 
+  // Ensure messages is an array
+  const safeMessages = messages || [];
+  const safeChatDurations = chatDurations || [];
+
   // Calculate which messages to show based on the current frame
-  const visibleMessages = messages.filter((_, index) => {
-    const startFrame = chatDurations
+  const visibleMessages = safeMessages.filter((_, index) => {
+    const startFrame = safeChatDurations
       .slice(0, index)
       .reduce((total, duration) => total + duration * fps, 0);
     return frame >= startFrame && frame < startFrame + fps * duration;
@@ -39,10 +43,17 @@ const WhatsappChat = ({
 
   const messagesToRender = visibleMessages.slice(messageOffset);
 
+  // Ensure tabData has the required properties with defaults
+  const safeTabData = {
+    general: { fullScreen: false },
+    ...tabData,
+    general: { fullScreen: false, ...tabData?.general }
+  };
+
   return (
     <div
       className={`w-[345px] h-[600px] ${isDark ? "wa-bg-dark" : "wa-bg-light"}`}
-      style={{ scale: tabData.general.fullScreen ? "3.25" : "2.75" }}
+      style={{ scale: safeTabData.general.fullScreen ? "3.25" : "2.75" }}
     >
       {/* Header */}
       <section
@@ -150,7 +161,7 @@ const WhatsappChat = ({
               );
             }
           } else if (msg.content.type === "Image") {
-            if (!msg.content.url) return null;
+            if (!msg.content.image) return null;
 
             if (msg.type === "Left") {
               return (
@@ -167,7 +178,7 @@ const WhatsappChat = ({
                     }`}
                   >
                     <img
-                      src={msg.content.url}
+                      src={msg.content.image}
                       alt='Message content'
                       className='object-cover max-w-[200px] max-h-[200px] rounded-xl'
                     />
@@ -187,7 +198,7 @@ const WhatsappChat = ({
                     }`}
                   >
                     <img
-                      src={msg.content.url}
+                      src={msg.content.image}
                       alt='Message content'
                       className='object-cover max-w-[200px] max-h-[200px] rounded-xl'
                     />

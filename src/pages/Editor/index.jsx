@@ -12,7 +12,7 @@ import RedditTab from "./Tabs/reddit/RedditTab";
 import CaptionsTab from "./Tabs/captions/CaptionsTab";
 import WyrTab from "./Tabs/wyr/WyrTab";
 import { VideoPlayer } from "./components/VideoPlayer";
-import axios from "axios";
+import axios from "../../constants/api.js";
 // import {MyVideo} from './remotion/MyVideo';
 
 export const EditorContext = createContext();
@@ -209,6 +209,7 @@ const Editor = () => {
       mainTabComponent = <FakeTextTab data={data} />;
       break;
     case "Ai Videos":
+    case "AiVideo":
       mainTabComponent = <AiVideosTab data={data} />;
       break;
     case "Quiz":
