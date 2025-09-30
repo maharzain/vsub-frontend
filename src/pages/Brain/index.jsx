@@ -152,6 +152,8 @@ const Brain = () => {
         selectedTemplate={selectedTemplate}
         setSelectedTemplate={setSelectedTemplate}
       />
+
+      
       <div className='py-3' />
       <div className='flex justify-end pb-44'>
         <FilledButton 
