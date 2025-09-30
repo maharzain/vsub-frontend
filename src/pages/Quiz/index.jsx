@@ -7,10 +7,10 @@ import { languages, quizTemplates, quizPresetPrompts } from "../../constants";
 import TemplatesBox from "../../components/TemplatesBox";
 import FilledButton from "../../components/FilledButton";
 import QuizTabUI from "./Components/QuizTabUI";
+import QuestionPreview from "./Components/QuestionPreview";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
-import QuizSvg from "../../../src/assets/images/questionMark.svg";
+import axios from "../../constants/api.js";
 
 export const QuizContext = createContext();
 
@@ -43,6 +43,7 @@ const Quiz = () => {
   // continue btn
   const [isPremium, setIsPremium] = useState(true);
   const [proceed, setProceed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -59,8 +60,8 @@ const Quiz = () => {
     setProceed(questions.length > 0);
   }, [questions]);
 
-  const handleContinue = () => {
-    // If media is valid, check if the user is a premium subscriber
+  const handleContinue = async () => {
+    // If the user is a premium subscriber
     if (!isPremium) {
       toast.error("Please subscribe to a paid plan.", {
         duration: 2000,
@@ -68,19 +69,41 @@ const Quiz = () => {
       });
       return; // Stop further execution
     }
-
-    // If all validations pass  proceed to the next page
+  
+    // If all validations pass proceed to the next page
     if (questions.length != 0 && isPremium) {
-      setTimeout(() => {
-        // navigate to the next page
-        const uniqueKey = uuidv4(); // Generate a unique key
-        const tabName = "Quiz"; // Set the tab name
-        const img = QuizSvg; // Set the image
-        const template = selectedTemplate; // Set the selected template
-        navigate(`/workspace/editor/${uniqueKey}`, {
-          state: { data: questions, name: tabName, img, template },
+      setIsLoading(true);
+      
+      try {
+        toast.loading("Creating your quiz... Please wait", {
+          id: "quiz-processing",
+          duration: Infinity,
         });
-      }, 1000); // Adjust timing if needed
+
+        const response = await axios.post('/initiate-quiz', {
+          questions: questions,
+          language: language,
+          media: selectedTemplate,
+          selectedTemplate: selectedTemplate,
+          voiceProvider: voiceProvider,
+          voice: voice
+        });
+
+        if (response.data && response.data.id) {
+          toast.dismiss("quiz-processing");
+          toast.success("Quiz created successfully!");
+          navigate(`/workspace/editor/${response.data.id}`);
+        } else {
+          toast.dismiss("quiz-processing");
+          toast.error('Failed to create quiz');
+        }
+      } catch (error) {
+        console.error('Error creating quiz:', error);
+        toast.dismiss("quiz-processing");
+        toast.error('Failed to create quiz. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   const contextValues = {
@@ -137,6 +160,13 @@ const Quiz = () => {
           </div>
         </BorderBox>
         <div className='py-3' />
+        
+        {/* Question Preview - Show questions above template */}
+        <QuestionPreview 
+          questions={questions}
+          selectedTemplate={selectedTemplate}
+        />
+        
         {/* Templates Selection Menu */}
         <TemplatesBox
           templateData={quizTemplates}

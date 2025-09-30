@@ -9,11 +9,141 @@ import { languages } from "../../../constants";
 import { QuizContext } from "../index";
 import searchIcon from "../../../assets/images/searchIcon.svg";
 import InputText from "../../../components/InputText";
+import axios from "../../../constants/api.js";
+import { toast } from "react-hot-toast";
+
+// Function to parse generated quiz content into question objects
+const parseGeneratedQuizContent = (content) => {
+  const questions = [];
+  
+  try {
+    // Split content by question patterns (looking for numbered questions)
+    const questionBlocks = content.split(/(?=\d+\.|\n\d+\.)/g).filter(block => block.trim());
+    
+    questionBlocks.forEach((block) => {
+      const lines = block.trim().split('\n').filter(line => line.trim());
+      if (lines.length === 0) return;
+      
+      // Extract question text (first line after removing number)
+      let questionText = lines[0].replace(/^\d+\.\s*/, '').trim();
+      if (!questionText) return;
+      
+      // Find options in the block
+      const options = [];
+      let correctAnswerIndex = 0;
+      
+      lines.forEach((line, lineIndex) => {
+        const optionMatch = line.match(/^[A-D][).]\s*(.+)/i);
+        if (optionMatch) {
+          const optionText = optionMatch[1].trim();
+          // Check if this line or nearby lines indicate correct answer
+          const isCorrect = line.toLowerCase().includes('correct') || 
+                           (lineIndex < lines.length - 1 && lines[lineIndex + 1].toLowerCase().includes('correct')) ||
+                           line.includes('*') || line.includes('✓');
+          
+          if (isCorrect) correctAnswerIndex = options.length;
+          
+          options.push({
+            text: optionText,
+            isCorrect: false
+          });
+        }
+      });
+      
+      // If we found options, mark the correct one
+      if (options.length >= 2) {
+        if (options[correctAnswerIndex]) {
+          options[correctAnswerIndex].isCorrect = true;
+        } else {
+          // Default to first option if no correct answer found
+          options[0].isCorrect = true;
+        }
+        
+        questions.push({
+          type: "Question",
+          statement: questionText,
+          options: options
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error parsing quiz content:', error);
+  }
+  
+  return questions;
+};
 
 const GenQueModal = ({ show, handleClose }) => {
-  const { queLang, setQueLang, queTopic, setQueTopic } =
+  const { queLang, setQueLang, queTopic, setQueTopic, setQuestions } =
     useContext(QuizContext);
   const [langInput, setLangInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleGenerate = async () => {
+    // Validate inputs
+    if (!queTopic.trim()) {
+      toast.error("Please enter a topic", {
+        duration: 4000,
+        position: "top-center",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      toast.loading("Generating quiz questions... Please wait", {
+        id: "quiz-processing",
+        duration: Infinity,
+      });
+
+      const response = await axios.post('/initiate-quiz', {
+        language: queLang,
+        media: queTopic,
+        selectedTemplate: "Quiz Questions"
+      });
+
+      if (response.data && response.data.content) {
+        // Parse the generated content and create questions
+        const generatedContent = response.data.content;
+        
+        // Parse the generated content to extract questions and options
+        const newQuestions = parseGeneratedQuizContent(generatedContent);
+        
+        if (newQuestions.length > 0) {
+          setQuestions(prevQuestions => [...prevQuestions, ...newQuestions]);
+        } else {
+          // Fallback if parsing fails
+          const fallbackQuestion = {
+            type: "Question",
+            statement: `Generated question about ${queTopic} in ${queLang}`,
+            options: [
+              { text: "Option A", isCorrect: true },
+              { text: "Option B", isCorrect: false },
+              { text: "Option C", isCorrect: false },
+              { text: "Option D", isCorrect: false }
+            ]
+          };
+          setQuestions(prevQuestions => [...prevQuestions, fallbackQuestion]);
+        }
+        
+        toast.dismiss("quiz-processing");
+        toast.success("Quiz questions generated successfully!");
+        handleClose();
+      } else {
+        toast.dismiss("quiz-processing");
+        toast.error('Failed to generate quiz questions');
+      }
+    } catch (error) {
+      console.error('Error generating quiz questions:', error);
+      toast.dismiss("quiz-processing");
+      toast.error('Failed to generate quiz questions. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Define animation variants for the modal
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.8 },
@@ -90,7 +220,13 @@ const GenQueModal = ({ show, handleClose }) => {
             {/* Modal Footer */}
             <div className='flex justify-end mt-6 gap-2'>
               <BorderButton onClick={handleClose}>Cancel</BorderButton>
-              <FilledButton size='1.9rem'>Ok</FilledButton>
+              <FilledButton 
+                size='1.9rem' 
+                onClick={handleGenerate}
+                disabled={isLoading}
+              >
+                {isLoading ? "Generating..." : "Ok"}
+              </FilledButton>
             </div>
           </motion.div>
         </div>

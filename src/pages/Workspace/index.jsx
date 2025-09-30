@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Container from "../../components/Container";
 import Notice from "../../components/Notice";
 import CategoryCard from "../../components/CategoryCard";
@@ -6,18 +6,57 @@ import searchIcon from "../../assets/images/searchIcon.svg";
 import noData from "../../assets/images/noData.svg";
 import { categoryCardInformation } from "../../constants";
 import Modal from "../../components/Modal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "../../components/Button";
 import BorderBox from "../../components/BorderBox";
 import BorderButton from "../../components/BorderButton";
 import FilledButton from "../../components/FilledButton";
 import { IconFolderPlus } from "@tabler/icons-react";
+import axios from "../../constants/api.js";
 
 const Workspace = () => {
   const [showModal, setShowModal] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
+
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/workspaces');
+        if (response.data.success) {
+          setWorkspaces(response.data.data);
+        } else {
+          setError('Failed to fetch workspaces');
+        }
+      } catch (err) {
+        console.error('Error fetching workspaces:', err);
+        setError('Failed to fetch workspaces');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorkspaces();
+  }, []);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleViewVideo = (workspaceId) => {
+    navigate(`/workspace/editor/${workspaceId}`);
+  };
   return (
     <Container>
       <div className='py-14'>
@@ -128,17 +167,58 @@ const Workspace = () => {
         <ul className='flex justify-between text-primary-font bg-lightPurple mt-6 px-2 sm:px-10 py-4 rounded-md'>
           <li className='border-l-2 border-tableBorder pl-2 sm:ml-10'>Name</li>
           <li className='border-l-2 border-tableBorder pl-2'>Status</li>
-          <li className='border-l-2 border-tableBorder pl-2 sm:mr-20'>
+          <li className='border-l-2 border-tableBorder pl-2'>
             Created
+          </li>
+          <li className='border-l-2 border-tableBorder pl-2 sm:mr-20'>
+            Actions
           </li>
         </ul>
 
-        <div className='py-12 flex items-center justify-center'>
-          <div>
-            <img src={noData} alt='no data' />
-            <p className='mt-3 text-primary-font'>No Data</p>
+        {loading ? (
+          <div className='py-12 flex items-center justify-center'>
+            <p className='text-primary-font'>Loading...</p>
           </div>
-        </div>
+        ) : error ? (
+          <div className='py-12 flex items-center justify-center'>
+            <p className='text-red-400'>{error}</p>
+          </div>
+        ) : workspaces.length === 0 ? (
+          <div className='py-12 flex items-center justify-center'>
+            <div>
+              <img src={noData} alt='no data' />
+              <p className='mt-3 text-primary-font'>No Data</p>
+            </div>
+          </div>
+        ) : (
+          <div className='mt-4'>
+            {workspaces.map((workspace) => (
+              <div key={workspace.id} className='flex justify-between text-primary-font px-2 sm:px-10 py-3 border-b border-gray-700 hover:bg-gray-800'>
+                <div className='pl-2 sm:ml-10 truncate flex-1'>
+                  <Link to={`/workspace/editor/${workspace.id}`} className='hover:text-glowBlue'>
+                    {workspace.name}
+                  </Link>
+                </div>
+                <div className='pl-2 flex-1 text-center'>
+                  <span className={`px-2 py-1 rounded text-xs ${workspace.status === 'Completed' ? 'bg-green-800 text-green-200' : 'bg-yellow-800 text-yellow-200'}`}>
+                    {workspace.status}
+                  </span>
+                </div>
+                <div className='pl-2 flex-1 text-center'>
+                  {formatDate(workspace.created)}
+                </div>
+                <div className='pl-2 sm:mr-20 flex-1 text-right'>
+                  <button 
+                    onClick={() => handleViewVideo(workspace.id)}
+                    className='px-3 py-1 bg-glowBlue hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors'
+                  >
+                    View Video
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </BorderBox>
       <div className='pb-32' />
     </Container>
